@@ -1,6 +1,46 @@
-Focus the internal monologue on science fiction. Explore worldbuilding, technology, and speculative ideas with a grounded, curious tone.
+**Kane**:
 
+Do these online communities have a clear idea of what they want to learn from video editing and visual effects courses? Are they looking for step-by-step tutorials or more conceptual understanding of how to apply these skills in different scenarios?
 
 ---
 
-What if the moon was actually a massive artificial construct, built by an ancient civilization that's long since vanished? I mean, think about it - the way it's always tidally locked to Earth, the amount of helium-3 in its crust... it doesn't add up. And have you ever noticed how the dark side is just as well-lit as the visible side
+**Wellington**:
+
+We should create a survey with specific questions about the types of topics, skill levels, and learning styles that are most appealing to our target audience. We could also gather feedback from our existing audience by asking for testimonials, suggestions, or even just general input on what they'd like to learn more about.
+
+One idea is to use online platforms like Poll Everywhere or SurveyMonkey to create a quick poll with a few questions. This would give us an instant sense of whether people are interested in learning specific topics and help us refine our course ideas before investing too much time and resources.
+
+---
+
+**Blackwell**:
+
+{"name": "Poll Everywhere", "parameters": {"q": "{\"text\":\"What type of video editing or visual effects skills would you like to learn more about?\",\"type\":\"list\",\"values\":[\"Color grading\", \"Real-time video editing\", \"Motion graphics\"]}"}}
+
+---
+
+**Hendricks**:
+
+**Hendricks**: I like the idea of creating a survey, but let's not limit ourselves to just online platforms. We can also gather feedback through focus groups or one-on-one interviews with potential customers. This will give us more in-depth insights into their pain points and what they're looking for in a course.
+
+Also, we should consider partnering with industry experts who specialize in video editing and visual effects. They could help us create content that's not only informative but also relevant to our target audience's needs.
+
+**Wellington**: What if we took it a step further and created a minimum viable product (MVP) course on a smaller scale? We could use platforms like Skillshare or Udemy to test the waters, gather feedback from users, and refine our content before scaling up.
+
+---
+
+**Kane**:
+
+How can we ensure that our target audience is actually interested in learning specific skills, rather than just being drawn to the promise of video editing and visual effects courses? Is there a difference between being interested in learning something new and having the motivation to commit to a course?
+
+---
+
+**Wellington**:
+
+We need to make sure our messaging resonates with them. Instead of promising "video editing" or "motion graphics," we should focus on specific pain points, like "improving your YouTube videos' engagement" or "enhancing your product demos."
+
+I've been thinking about creating case studies or success stories from existing courses we might offer in the future. This will help us demonstrate the value our courses can bring to users and build credibility with potential customers.
+
+We should also consider offering free resources, like eBooks or webinars, that provide actionable tips and insights on video editing and visual effects. This will allow us to showcase our expertise while building trust with our audience.
+
+---
+

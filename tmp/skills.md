@@ -1,0 +1,156 @@
+# Skills Extracted from Blog
+
+_Generated from analysis of all markdown files_
+
+- 3D Printing
+- 8-bit
+- ASCII
+- AWK
+- Alpine
+- Android
+- Anthropic
+- Apache
+- Assembly
+- Audio
+- Auth
+- Authentication
+- BASIC
+- BBS
+- Bash
+- Bookmarklet
+- CAD
+- CDN
+- CLI
+- CSS
+- Caddy
+- ChatGPT
+- CloudFlare
+- Codex
+- Command Line
+- Conf
+- Config
+- Cookie
+- Cricut
+- Cron
+- DNS
+- Debian
+- DigitalOcean
+- Discord
+- Docker
+- EPUB
+- Echo
+- Electronics
+- Embedded Systems
+- Emulator
+- FFmpeg
+- Favicon
+- Fiber
+- Firewall
+- GPT
+- Gist
+- Git
+- GitHub
+- GitHub Pages
+- GitLab
+- Gitea
+- Go
+- Google Analytics
+- Graphviz
+- HTML
+- HTTP
+- HTTPS
+- Hardware
+- Hugo
+- Hyper
+- IP
+- ImageMagick
+- Init
+- JSON
+- JavaScript
+- Jekyll
+- LLaMA
+- Ledger
+- Linux
+- LocalStorage
+- Lynx
+- Mac
+- Make
+- Markdown
+- Mermaid
+- Netlify
+- Nginx
+- Ollama
+- OpenAI
+- OpenSCAD
+- OpenSSL
+- PDF
+- PHP
+- PWA
+- PayPal
+- Progressive Web App
+- Proxy
+- Python
+- R
+- REST
+- RSYNC
+- Raspberry Pi
+- React
+- Retro
+- Retro Computing
+- SCP
+- SPA
+- SQL
+- SQLite
+- SSH
+- STL
+- SVG
+- Schedule
+- Segment
+- SendGrid
+- Shell
+- Signal
+- Slack
+- Soldering
+- Square
+- Streaming
+- Stripe
+- Systemd
+- TCP
+- TLS
+- TRS-80
+- Tandy
+- Telegard
+- Terminal
+- Timer
+- Twilio
+- URI
+- URL
+- Ubuntu
+- VPN
+- VS Code
+- Vi
+- Video
+- WSL
+- Web App
+- WebP
+- Windows
+- XML
+- XMLHttpRequest
+- Zoom
+- Zsh
+- awesome
+- crontab
+- cut
+- ePub
+- ffmpeg
+- find
+- gzip
+- iOS
+- macOS
+- macbook
+- npm
+- paste
+- sed
+- sort
+- unzip
+- zip
