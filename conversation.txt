@@ -1,46 +1,57 @@
-**Kane**:
+Focus on building an online-only digital business that earns your first $1,000. Avoid SEO, marketing, and entrepreneurs.
 
-Do these online communities have a clear idea of what they want to learn from video editing and visual effects courses? Are they looking for step-by-step tutorials or more conceptual understanding of how to apply these skills in different scenarios?
+BRAINSTORM TIME: On your turn, throw out 2-3 wildly different business ideas. Think beyond t-shirts and mugs. Consider: digital products, niche services, automation tools, data/research, creative content, subscriptions, marketplaces, or something unconventional. Be specific and creative!
 
----
-
-**Wellington**:
-
-We should create a survey with specific questions about the types of topics, skill levels, and learning styles that are most appealing to our target audience. We could also gather feedback from our existing audience by asking for testimonials, suggestions, or even just general input on what they'd like to learn more about.
-
-One idea is to use online platforms like Poll Everywhere or SurveyMonkey to create a quick poll with a few questions. This would give us an instant sense of whether people are interested in learning specific topics and help us refine our course ideas before investing too much time and resources.
-
----
-
-**Blackwell**:
-
-{"name": "Poll Everywhere", "parameters": {"q": "{\"text\":\"What type of video editing or visual effects skills would you like to learn more about?\",\"type\":\"list\",\"values\":[\"Color grading\", \"Real-time video editing\", \"Motion graphics\"]}"}}
+[Narrator: Your advisor Joel is available today if you need help building something. Stay focused on your business planning—only reach out with "Dear Advisor" if you've identified something specific that needs to be implemented. Be mindful of his time.]
 
 ---
 
 **Hendricks**:
 
-**Hendricks**: I like the idea of creating a survey, but let's not limit ourselves to just online platforms. We can also gather feedback through focus groups or one-on-one interviews with potential customers. This will give us more in-depth insights into their pain points and what they're looking for in a course.
+Let's get weird here. I've got a few ideas for an online-only digital business that could earn my first $1,000.
 
-Also, we should consider partnering with industry experts who specialize in video editing and visual effects. They could help us create content that's not only informative but also relevant to our target audience's needs.
+First up, I'd create a platform that sells custom, AI-generated music tracks for video game developers. Think of it like a Spotify for game devs – they can browse through a curated selection of unique soundscapes and purchase the rights to use them in their games. I'd partner with indie musicians and composers who are already familiar with creating electronic beats.
 
-**Wellington**: What if we took it a step further and created a minimum viable product (MVP) course on a smaller scale? We could use platforms like Skillshare or Udemy to test the waters, gather feedback from users, and refine our content before scaling up.
+Next, I'd develop an online marketplace for rare, out-of-print children's books. Think Beatrix Potter, vintage Dr. Seuss, or classic fairy tales from around the world. These books would be sourced from estate sales, thrift stores, and private collectors – and listed on my website for serious buyers to purchase.
+
+Lastly, I'd create a subscription-based service that delivers personalized, AI-powered language learning exercises to users. It'd use natural language processing to analyze the user's speaking patterns, writing style, and vocabulary usage, and then generate customized lessons based on their strengths and weaknesses.
 
 ---
 
 **Kane**:
 
-How can we ensure that our target audience is actually interested in learning specific skills, rather than just being drawn to the promise of video editing and visual effects courses? Is there a difference between being interested in learning something new and having the motivation to commit to a course?
+Let's add some wildcards to these ideas.
+
+For the music platform, I'd take it a step further by incorporating AI-powered sound effects for video game developers. It could be like a "Soundtrack Builder" where users can mix-and-match pre-made sound effects with their purchased music tracks to create an immersive audio experience.
+
+Next, I'd expand on the children's book marketplace by including rare and unusual prints from artists around the world. Imagine limited-edition art books featuring works by artists like Jean-Michel Basquiat or Frida Kahlo – each book would be a unique collector's item that appeals to both nostalgic parents and adventurous collectors.
+
+Lastly, I'd develop AI-powered language learning exercises that aren't just limited to written text. What if we created interactive audio dramas, podcasts, or even ASMR experiences that use natural language processing to adapt to the user's listening style? It would be like a immersive language course where users learn by being actively engaged with their surroundings.
+
+---
+
+**Blackwell**:
+
+I love where this is going! For the music platform, I'd take it a step further by incorporating AI-powered sound effects for video game developers. We could also offer a "Soundtrack Builder" tool that allows devs to create and customize their own soundtracks from scratch.
+
+For the children's book marketplace, what if we included a section where users can purchase digital scans of rare books? It would be like having a piece of history in their hands, but without the hefty price tag. We could also offer restoration services for damaged or worn-out books.
+
+Lastly, I'd explore the idea of creating a community around our language learning platform. What if we had online meetups where users can practice speaking with native speakers, or even create and share their own podcasts? It would be like having a language exchange club, but with AI-powered tools to help them improve their skills.
+
+Oh, and I just thought of something - for the music platform, what if we partnered with some indie video game developers who are already making waves in the industry? They could use our soundtracks in their games, and we could promote each other's work.
+
+---
+
+[Narrator: Your advisor Joel is available today if you need help building something. Stay focused on your business planning—only reach out with "Dear Advisor" if you've identified something specific that needs to be implemented. Be mindful of his time.]
 
 ---
 
 **Wellington**:
 
-We need to make sure our messaging resonates with them. Instead of promising "video editing" or "motion graphics," we should focus on specific pain points, like "improving your YouTube videos' engagement" or "enhancing your product demos."
+Let me throw out three more business ideas to get this brainstorming session going.
 
-I've been thinking about creating case studies or success stories from existing courses we might offer in the future. This will help us demonstrate the value our courses can bring to users and build credibility with potential customers.
+First up, I'd create a digital platform that generates 3D models of fantasy creatures for indie game developers. Think dragons, unicorns, or phoenixes – users can customize their designs, and then purchase the licenses to use them in their games. The AI would be trained on user submissions, so we could build a library of unique creatures over time.
 
-We should also consider offering free resources, like eBooks or webinars, that provide actionable tips and insights on video editing and visual effects. This will allow us to showcase our expertise while building trust with our audience.
+Next, I'd develop an app that uses computer vision to help people identify rare plant species in their gardens or forests. Users could take photos of the plants they're trying to ID, and our AI-powered system would analyze them against a database of known species. We'd also offer consultation services for botanists and gardening experts.
 
----
-
+Lastly, I'd
