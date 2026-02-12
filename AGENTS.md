@@ -5,7 +5,7 @@
 - `persona/` holds persona prompt files (`*.txt`) with optional frontmatter for tool access.
 - `context/` holds shared context injected into prompts (e.g., `context/plan.txt` when created).
 - `seed*.txt` files provide alternate starting prompts; `seed.txt` is the default.
-- `conversation.txt` is the rolling window; `conversation.log` is the full history.
+- `conversation.json` is the rolling window; `conversation.log` is the full history.
 - `test-*.js` scripts are lightweight health checks and diagnostics.
 - Docs: `README.md`, `CLAUDE.md`, `TESTING.md`, and setup guides like `PUSHOVER-SETUP.md`.
 

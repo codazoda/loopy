@@ -123,7 +123,7 @@ console.log('Shuffled order:', personas.join(', '));
 ### If Moderator doesn't speak:
 - Moderator only speaks when detecting problems
 - If conversation is healthy, Moderator stays silent (this is good!)
-- To test: manually create a loop by editing conversation.txt
+- To test: manually create a loop by editing conversation.json
 
 ## Next Steps
 

@@ -6,8 +6,8 @@ echo "Resetting loopy..."
 rm -f conversation.log
 echo "✓ Deleted conversation.log"
 
-rm -f conversation.txt
-echo "✓ Deleted conversation.txt"
+rm -f conversation.json
+echo "✓ Deleted conversation.json"
 
 rm -f context/plan.txt
 echo "✓ Deleted context/plan.txt"

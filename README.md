@@ -37,10 +37,14 @@ All optional via environment variables:
 
 - `OLLAMA_HOST` (default `http://127.0.0.1:11434`)
 - `OLLAMA_MODEL` (default: auto-detected, prefers `llama3.2:1b`)
-- `CONVO_FILE` (default `conversation.txt`)
+- `CONVO_FILE` (default `conversation.json`)
 - `CONVO_LOG` (default `conversation.log`)
 - `SLEEP_MS` (default `5000`)
 - `KEEP_CYCLES` (default `6`, keeps `KEEP_CYCLES x number_of_personas` persona turns)
+- `WORKFLOW_ENABLED` (default `true`)
+- `WORKFLOW_CYCLE_WINDOW` (default `3` full persona cycles)
+- `MODERATOR_STRICT_MODE` (default `true`, moderator auto-falls back to `NO_INTERVENTION` when off-policy)
+- `DISCARD_MODE` (default `transcript_only`, rejects multi-speaker transcript formatting only)
 
 See [CLAUDE.md](CLAUDE.md) for full configuration options.
 
@@ -49,3 +53,7 @@ Example:
 ```bash
 OLLAMA_MODEL=llama3.2:1b KEEP_CYCLES=8 SLEEP_MS=5000 node loopy.js
 ```
+
+## Milestones
+
+- On 2026-02-14 (commit e15e810) this worked non-stop for 8+ hours using llama3.2:1b

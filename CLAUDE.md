@@ -32,13 +32,18 @@ All configuration is via environment variables. You can either:
 **Environment variables:**
 - `OLLAMA_HOST` - Ollama server URL (default: `http://127.0.0.1:11434`)
 - `OLLAMA_MODEL` - Model to use (default: auto-detected, prefers `llama3.2:1b`)
-- `CONVO_FILE` - Rolling conversation file (default: `conversation.txt`)
+- `CONVO_FILE` - Rolling conversation file (default: `conversation.json`)
 - `CONVO_LOG` - Full conversation history (default: `conversation.log`)
 - `SYSTEM_FILE` - System instructions (default: `system.txt`)
 - `SEED_FILE` - Initial conversation prompt (default: `seed.txt`)
 - `PERSONA_DIR` - Directory containing persona files (default: `persona/`)
 - `SLEEP_MS` - Delay between turns in milliseconds (default: `5000`)
-- `KEEP_CYCLES` - Persona cycles kept in `conversation.txt` (default: `6`; total persona turns kept = `KEEP_CYCLES x persona_count`)
+- `KEEP_CYCLES` - Persona cycles kept in `conversation.json` (default: `6`; total persona turns kept = `KEEP_CYCLES x persona_count`)
+- `WORKFLOW_ENABLED` - Enable staged workflow directives and state transitions (default: `true`)
+- `WORKFLOW_CYCLE_WINDOW` - Number of full persona cycles between workflow evaluations (default: `3`)
+- `WORKFLOW_STATE_FILE` - Workflow state JSON path (default: `context/workflow_state.json`)
+- `MODERATOR_STRICT_MODE` - Enforce moderator as process-only; invalid moderator outputs become `NO_INTERVENTION` (default: `true`)
+- `DISCARD_MODE` - Response validation policy (default: `transcript_only`, rejects transcript-style multi-speaker output)
 - `ADVISOR_FILE` - Human advisor narrator message file (default: `advisor.txt`)
 - `ADVISOR_INTERVAL_MS` - Milliseconds between advisor availability notices (default: `14400000` = 4 hours)
 - `ADVISOR_LOG` - Log file for turns mentioning "Advisor" (default: `advisor.log`)
@@ -69,17 +74,17 @@ Note: Shell environment variables take precedence over .env file values.
 1. **Initialization**: Shuffles persona files from `persona/` directory
 2. **Main Loop**: Infinite loop where each iteration:
    - Loads `system.txt` for conversation style instructions
-   - Loads `conversation.txt` (or seeds from `seed.txt` if empty)
+   - Loads `conversation.json` (or seeds from `seed.txt` if empty)
    - Checks if advisor interval has elapsed and injects narrator message if needed
    - Selects next persona in rotation
    - Parses persona file (frontmatter config + persona description)
    - Loads all `.txt` files from `context/` directory and injects into system prompt as labeled blocks (e.g., `[plan]`)
    - Sends chat request to Ollama with system prompt (persona + system + context blocks) and user prompt (conversation history)
    - Streams response with speaker prefix (e.g., `**Kane**:`)
-   - Appends response to both `conversation.txt` and `conversation.log`
+   - Appends response to both `conversation.json` and `conversation.log`
    - Logs tool calls if present and executes built-in tools via the TOOLS registry
    - Logs turns mentioning "Advisor" to `advisor.log` with timestamp
-   - Trims `conversation.txt` to the last `KEEP_CYCLES x persona_count` persona turns
+   - Trims `conversation.json` to the last `KEEP_CYCLES x persona_count` persona turns
    - Sleeps for SLEEP_MS before next turn
 
 ### Key Components
@@ -98,7 +103,7 @@ Note: Shell environment variables take precedence over .env file values.
 - Returns `{ config, body }` object
 
 **Conversation Files**:
-- `conversation.txt` - Rolling window of recent turns (limited by `KEEP_CYCLES x persona_count` persona turns)
+- `conversation.json` - Rolling window of recent turns (limited by `KEEP_CYCLES x persona_count` persona turns)
 - `conversation.log` - Complete history including tool calls
 - Turns separated by `\n\n---\n\n`
 - Speaker names formatted as `**Name**:\n\n`
