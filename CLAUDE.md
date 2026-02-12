@@ -25,25 +25,42 @@ node loopy.js | say -v Samantha -r 180
 
 ## Configuration
 
-All configuration is via environment variables:
-- `OLLAMA_MODEL` - Model to use (default: `llama3.2:latest`)
+All configuration is via environment variables. You can either:
+1. Set them in your shell: `export OLLAMA_MODEL=llama3.2:latest`
+2. Create a `.env` file in the project root (automatically loaded on startup)
+
+**Environment variables:**
+- `OLLAMA_HOST` - Ollama server URL (default: `http://127.0.0.1:11434`)
+- `OLLAMA_MODEL` - Model to use (default: auto-detected, prefers `llama3.2:1b`)
 - `CONVO_FILE` - Rolling conversation file (default: `conversation.txt`)
 - `CONVO_LOG` - Full conversation history (default: `conversation.log`)
 - `SYSTEM_FILE` - System instructions (default: `system.txt`)
 - `SEED_FILE` - Initial conversation prompt (default: `seed.txt`)
 - `PERSONA_DIR` - Directory containing persona files (default: `persona/`)
-- `OLLAMA_URL` - Ollama API endpoint (default: `http://127.0.0.1:11434/api/chat`)
 - `SLEEP_MS` - Delay between turns in milliseconds (default: `5000`)
-- `MAX_TURNS` - Conversation window size (default: `6`)
+- `KEEP_CYCLES` - Persona cycles kept in `conversation.txt` (default: `6`; total persona turns kept = `KEEP_CYCLES x persona_count`)
 - `ADVISOR_FILE` - Human advisor narrator message file (default: `advisor.txt`)
-- `ADVISOR_INTERVAL_MS` - Milliseconds between advisor availability notices (default: `86400000` = 24 hours)
+- `ADVISOR_INTERVAL_MS` - Milliseconds between advisor availability notices (default: `14400000` = 4 hours)
 - `ADVISOR_LOG` - Log file for turns mentioning "Advisor" (default: `advisor.log`)
 - `CONTEXT_DIR` - Directory containing context files injected into system prompts (default: `context/`)
+- `PUSHOVER_TOKEN` - Pushover app API token for notifications (required for pushover.notify tool)
+- `PUSHOVER_USER` - Pushover user/group key for notifications (required for pushover.notify tool)
 
-Example:
+**Using .env file (recommended):**
 ```bash
-OLLAMA_MODEL=llama3.2:latest MAX_TURNS=8 SLEEP_MS=5000 node loopy.js
+# Copy example and edit
+cp .env.example .env
+# Edit .env with your values
+# Then just run:
+node loopy.js
 ```
+
+**Using shell environment variables:**
+```bash
+OLLAMA_MODEL=llama3.2:latest KEEP_CYCLES=8 SLEEP_MS=5000 node loopy.js
+```
+
+Note: Shell environment variables take precedence over .env file values.
 
 ## Architecture
 
@@ -62,7 +79,7 @@ OLLAMA_MODEL=llama3.2:latest MAX_TURNS=8 SLEEP_MS=5000 node loopy.js
    - Appends response to both `conversation.txt` and `conversation.log`
    - Logs tool calls if present and executes built-in tools via the TOOLS registry
    - Logs turns mentioning "Advisor" to `advisor.log` with timestamp
-   - Trims `conversation.txt` to last MAX_TURNS entries
+   - Trims `conversation.txt` to the last `KEEP_CYCLES x persona_count` persona turns
    - Sleeps for SLEEP_MS before next turn
 
 ### Key Components
@@ -81,7 +98,7 @@ OLLAMA_MODEL=llama3.2:latest MAX_TURNS=8 SLEEP_MS=5000 node loopy.js
 - Returns `{ config, body }` object
 
 **Conversation Files**:
-- `conversation.txt` - Rolling window of recent turns (limited by MAX_TURNS)
+- `conversation.txt` - Rolling window of recent turns (limited by `KEEP_CYCLES x persona_count` persona turns)
 - `conversation.log` - Complete history including tool calls
 - Turns separated by `\n\n---\n\n`
 - Speaker names formatted as `**Name**:\n\n`
@@ -101,6 +118,7 @@ loopy.js defines a `TOOLS` object mapping tool names to their schema and executi
 
 **Current built-in tools:**
 - `plan.update`: Updates `context/plan.txt` by delegating to `copilot -p` CLI for formatting. Takes a short natural language instruction (e.g., "Add that we're targeting students") and rewrites the entire plan as clean markdown incorporating the change. If `copilot` command is unavailable, the update is skipped and the existing plan remains unchanged.
+- `pushover.notify`: Sends push notifications to the human advisor via Pushover API. Takes a message and optional title. Only enabled for secretary.txt persona. Requires `PUSHOVER_TOKEN` and `PUSHOVER_USER` environment variables to be set.
 
 ### Tool Calling
 
@@ -121,16 +139,36 @@ All `.txt` and `.md` files in the `context/` directory are automatically injecte
 - You can manually place files here for shared context (e.g., API specs, project goals)
 - Example: `context/plan.txt` contains the current team plan maintained by Blackwell
 
+### Model Auto-Detection
+
+On startup, loopy automatically detects the best available Ollama model:
+- Queries Ollama API (`/api/tags`) for available models
+- Uses preference order: `llama3.2:1b` → other `llama3.2` → other `llama3` → `llama2` → first available
+- Falls back gracefully if API is unreachable
+- Can be overridden with `OLLAMA_MODEL` environment variable
+- Logs selected model at startup for transparency
+
+**Preference rationale:**
+- `llama3.2:1b` is small, fast, and good for multi-turn conversations
+- Prefers smaller models for faster response times in the loop
+- Falls back to larger models if smaller ones aren't available
+
 ### Human Advisor Feature
 
 Periodically injects a narrator message informing the AI team that their human advisor is available:
-- On startup and every `ADVISOR_INTERVAL_MS` milliseconds (default: 24 hours)
+- On startup and every `ADVISOR_INTERVAL_MS` milliseconds (default: 4 hours)
 - Message content loaded from `advisor.txt` (hot-reloadable)
 - Next persona in rotation sees the message and can respond with a request
 - Any turn mentioning "Advisor" is automatically logged to `advisor.log` with timestamp
-- Messages naturally scroll out of the conversation window after MAX_TURNS
+- Messages naturally scroll out as persona turns exceed `KEEP_CYCLES x persona_count`
 - Feature is opt-in: no `advisor.txt` file means no injection
 - For testing, set `ADVISOR_INTERVAL_MS=10000` (10 seconds) to see rapid advisor notices
+
+**Contacting the Advisor:**
+- Secretary persona has access to `pushover.notify` tool for sending push notifications
+- Team can address "Dear Advisor" to signal they need human help
+- Secretary will only send notifications for specific, actionable requests
+- Requires `PUSHOVER_TOKEN` and `PUSHOVER_USER` environment variables
 
 ## Development Notes
 

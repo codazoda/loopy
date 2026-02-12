@@ -35,15 +35,17 @@ node loopy.js | say -v Samantha -r 180
 ## Config
 All optional via environment variables:
 
-- `OLLAMA_MODEL` (default `llama3.2:latest`)
+- `OLLAMA_HOST` (default `http://127.0.0.1:11434`)
+- `OLLAMA_MODEL` (default: auto-detected, prefers `llama3.2:1b`)
 - `CONVO_FILE` (default `conversation.txt`)
 - `CONVO_LOG` (default `conversation.log`)
-- `OLLAMA_URL` (default `http://127.0.0.1:11434/api/generate`)
-- `SLEEP_MS` (default `10000`)
-- `MAX_TURNS` (default `6`)
+- `SLEEP_MS` (default `5000`)
+- `KEEP_CYCLES` (default `6`, keeps `KEEP_CYCLES x number_of_personas` persona turns)
+
+See [CLAUDE.md](CLAUDE.md) for full configuration options.
 
 Example:
 
 ```bash
-OLLAMA_MODEL=llama3.2:latest MAX_TURNS=8 SLEEP_MS=5000 node loopy.js
+OLLAMA_MODEL=llama3.2:1b KEEP_CYCLES=8 SLEEP_MS=5000 node loopy.js
 ```
