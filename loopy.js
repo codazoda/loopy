@@ -114,8 +114,8 @@ const THINKING_FRAMES = '.oOo.';
 const THINKING_INTERVAL_MS = 120;
 const WORKFLOW_ENABLED = process.env.WORKFLOW_ENABLED !== 'false';
 const WORKFLOW_CYCLE_WINDOW = Math.max(1, Number(process.env.WORKFLOW_CYCLE_WINDOW || 3));
+const WORKFLOW_FILE = process.env.WORKFLOW_FILE || 'workflow';
 const WORKFLOW_STATE_FILE = process.env.WORKFLOW_STATE_FILE || `${CONTEXT_DIR}/workflow_state.json`;
-const WORKFLOW_STAGES = ['brainstorm', 'cluster', 'shortlist', 'decide', 'next_action'];
 const MODERATOR_STRICT_MODE = process.env.MODERATOR_STRICT_MODE !== 'false';
 const DISCARD_MODE = process.env.DISCARD_MODE || 'transcript_only';
 
@@ -237,81 +237,116 @@ const TOOLS = {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const startThinkingIndicator = () => {
+const clearTerminalLine = () => {
+  if (process.stdout.isTTY) {
+    process.stdout.write('\r\x1b[2K');
+  }
+};
+
+const startThinkingIndicator = (statusText = '') => {
   if (!process.stdout.isTTY) return null;
   let idx = 0;
-  const timer = setInterval(() => {
-    process.stdout.write(`\r${THINKING_FRAMES[idx]}`);
+  let lastLen = 0;
+  const render = () => {
+    const line = `${THINKING_FRAMES[idx]}${statusText ? ` ${statusText}` : ''}`;
+    process.stdout.write(`\r${line}`);
+    lastLen = line.length;
     idx = (idx + 1) % THINKING_FRAMES.length;
+  };
+  render();
+  const timer = setInterval(() => {
+    render();
   }, THINKING_INTERVAL_MS);
-  return { timer };
+  return { timer, lastLen };
 };
 
 const stopThinkingIndicator = (handle) => {
   if (!handle || !handle.timer) return;
   clearInterval(handle.timer);
-  if (process.stdout.isTTY) {
-    process.stdout.write('\r \r');
-  }
+  clearTerminalLine();
 };
 
-const normalizeOption = (text) =>
-  text
-    .toLowerCase()
-    .replace(/[`"'*_[\](){}]/g, ' ')
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+const DEFAULT_WORKFLOW_STEPS = [
+  { name: 'brainstorm', instruction: "Generate 2 distinct ideas. Use team language and build on prior turns." },
+  { name: 'cluster', instruction: 'Group overlapping ideas into themes and remove duplicates.' },
+  { name: 'shortlist', instruction: 'Narrow the options to at most three concrete choices.' },
+  { name: 'decide', instruction: 'Pick one option and show explicit agreement.' },
+  { name: 'next_action', instruction: 'Define the immediate next action for the chosen option.' }
+];
 
 const defaultWorkflowState = () => ({
-  stage: 'brainstorm',
-  cycle_count_in_stage: 0,
-  candidate_options: [],
-  shortlist_options: [],
-  locked_decision: null,
-  last_transition_reason: 'initial',
-  decide_window_failures: 0
+  step_index: 0,
+  cycles_in_step: 0,
+  total_turns: 0,
+  total_cycles: 0,
+  last_transition_reason: 'initial'
 });
 
-const cleanOptionList = (value, limit) => {
-  if (!Array.isArray(value)) return [];
-  const seen = new Set();
-  const cleaned = [];
-  for (const item of value) {
-    if (typeof item !== 'string') continue;
-    const option = item.trim().replace(/\s+/g, ' ');
-    if (option.length < 8) continue;
-    const key = normalizeOption(option);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    cleaned.push(option);
-    if (cleaned.length >= limit) break;
-  }
-  return cleaned;
-};
-
-const sanitizeWorkflowState = (state) => {
+const sanitizeWorkflowState = (state, stepCount = DEFAULT_WORKFLOW_STEPS.length) => {
   const base = defaultWorkflowState();
   if (!state || typeof state !== 'object') return base;
-  const next = { ...base, ...state };
-  if (!WORKFLOW_STAGES.includes(next.stage)) next.stage = base.stage;
-  next.cycle_count_in_stage = Math.max(0, Number(next.cycle_count_in_stage || 0));
-  next.decide_window_failures = Math.max(0, Number(next.decide_window_failures || 0));
-  next.candidate_options = cleanOptionList(next.candidate_options, 12);
-  next.shortlist_options = cleanOptionList(next.shortlist_options, 3);
-  next.locked_decision = typeof next.locked_decision === 'string' && next.locked_decision.trim()
-    ? next.locked_decision.trim()
-    : null;
+  const next = {
+    step_index: state.step_index,
+    cycles_in_step: state.cycles_in_step,
+    total_turns: state.total_turns,
+    total_cycles: state.total_cycles,
+    last_transition_reason: state.last_transition_reason
+  };
+  const safeStepCount = Math.max(1, Number(stepCount) || 1);
+  next.step_index = ((Number(next.step_index) || 0) % safeStepCount + safeStepCount) % safeStepCount;
+  next.cycles_in_step = Math.max(0, Number(next.cycles_in_step || 0));
+  next.total_turns = Math.max(0, Number(next.total_turns || 0));
+  next.total_cycles = Math.max(0, Number(next.total_cycles || 0));
   next.last_transition_reason = typeof next.last_transition_reason === 'string' && next.last_transition_reason.trim()
     ? next.last_transition_reason.trim()
     : base.last_transition_reason;
   return next;
 };
 
-const loadWorkflowState = async () => {
+const parseWorkflowSteps = (text) => {
+  const lines = text.split('\n');
+  const steps = [];
+  let current = null;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const header = line.match(/^\[([^\]]+)\]$/);
+    if (header) {
+      if (current && current.instruction.trim()) steps.push(current);
+      current = { name: header[1].trim(), instruction: '' };
+      continue;
+    }
+    if (!current) {
+      current = { name: `step_${steps.length + 1}`, instruction: '' };
+    }
+    current.instruction += `${line}\n`;
+  }
+  if (current && current.instruction.trim()) steps.push(current);
+
+  const cleaned = steps
+    .map((s, i) => ({
+      name: s.name || `step_${i + 1}`,
+      instruction: s.instruction.trim()
+    }))
+    .filter((s) => s.instruction.length > 0);
+
+  return cleaned.length > 0 ? cleaned : DEFAULT_WORKFLOW_STEPS;
+};
+
+const loadWorkflowSteps = async () => {
+  try {
+    const raw = await readFile(WORKFLOW_FILE, 'utf8');
+    return parseWorkflowSteps(raw);
+  } catch {
+    return DEFAULT_WORKFLOW_STEPS;
+  }
+};
+
+const loadWorkflowState = async (stepCount = DEFAULT_WORKFLOW_STEPS.length) => {
   try {
     const raw = await readFile(WORKFLOW_STATE_FILE, 'utf8');
-    return sanitizeWorkflowState(JSON.parse(raw));
+    return sanitizeWorkflowState(JSON.parse(raw), stepCount);
   } catch {
     const state = defaultWorkflowState();
     try {
@@ -321,228 +356,79 @@ const loadWorkflowState = async () => {
   }
 };
 
-const saveWorkflowState = async (state) => {
+const saveWorkflowState = async (state, stepCount = DEFAULT_WORKFLOW_STEPS.length) => {
   try {
-    await writeFile(WORKFLOW_STATE_FILE, JSON.stringify(sanitizeWorkflowState(state), null, 2), 'utf8');
+    await writeFile(WORKFLOW_STATE_FILE, JSON.stringify(sanitizeWorkflowState(state, stepCount), null, 2), 'utf8');
   } catch {}
 };
-
-const extractOptionsFromText = (text) => {
-  const options = [];
-  const lines = text.split('\n');
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    const bullet = line.match(/^[-*]\s+(.+)$/);
-    const numbered = line.match(/^\d+[.)]\s+(.+)$/);
-    const candidate = bullet?.[1] || numbered?.[1] || '';
-    if (!candidate) continue;
-    if (/^no confirmed decisions yet\.?$/i.test(candidate)) continue;
-    if (candidate.length < 8 || candidate.length > 220) continue;
-    options.push(candidate.replace(/\s+/g, ' ').trim());
-  }
-  if (options.length > 0) return options;
-
-  const sentences = text
-    .replace(/\s+/g, ' ')
-    .split(/[.!?]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  for (const sentence of sentences) {
-    if (sentence.length < 25 || sentence.length > 180) continue;
-    if (/^(i agree|we should choose|no intervention)/i.test(sentence)) continue;
-    options.push(sentence);
-    if (options.length >= 3) break;
-  }
-  return options;
+const getActiveWorkflowStep = (state, steps) => {
+  const safe = Array.isArray(steps) && steps.length > 0 ? steps : DEFAULT_WORKFLOW_STEPS;
+  const idx = ((state.step_index || 0) % safe.length + safe.length) % safe.length;
+  return safe[idx];
 };
 
-const collectCandidateOptions = (turns, personaSpeakers) => {
-  const recentPersonaTurns = turns
-    .filter((turn) => personaSpeakers.has(turn.speaker))
-    .slice(-50);
-  const collected = [];
-  for (const turn of recentPersonaTurns) {
-    collected.push(...extractOptionsFromText(turn.content || ''));
-  }
-  return cleanOptionList(collected, 12);
-};
-
-const pickTopOptions = (options, limit) => cleanOptionList(options, limit);
-
-const detectAgreementDecision = (turns, personaSpeakers, shortlistOptions) => {
-  const recentPersonaTurns = turns
-    .filter((turn) => personaSpeakers.has(turn.speaker))
-    .slice(-40);
-  if (recentPersonaTurns.length === 0) return null;
-
-  const optionSets = shortlistOptions.map((option) => ({
-    option,
-    key: normalizeOption(option),
-    supporters: new Set()
-  }));
-
-  for (const turn of recentPersonaTurns) {
-    const content = (turn.content || '').trim();
-    if (!content) continue;
-    if (!/\b(i agree|i support|i vote for|i pick|i choose|my vote is|we should choose|i'm for)\b/i.test(content)) {
-      continue;
-    }
-    const contentNorm = normalizeOption(content);
-    let matched = null;
-    for (const option of optionSets) {
-      if (!option.key) continue;
-      if (contentNorm.includes(option.key)) {
-        matched = option;
-        break;
-      }
-    }
-    if (matched) matched.supporters.add(turn.speaker);
-  }
-
-  let winner = null;
-  for (const option of optionSets) {
-    if (option.supporters.size >= 2) {
-      if (!winner || option.supporters.size > winner.supporters.size) winner = option;
-    }
-  }
-  return winner ? winner.option : null;
-};
-
-const evaluateWorkflowState = (state, turns, personaSpeakers) => {
-  const next = sanitizeWorkflowState(state);
-  const reason = [];
-  next.candidate_options = collectCandidateOptions(turns, personaSpeakers);
-
-  if (next.stage === 'brainstorm') {
-    if (next.candidate_options.length >= 5) {
-      next.stage = 'cluster';
-      next.cycle_count_in_stage = 0;
-      next.last_transition_reason = 'enough ideas captured for clustering';
-      return next;
-    }
-  } else if (next.stage === 'cluster') {
-    if (next.candidate_options.length >= 4 || next.cycle_count_in_stage >= 2) {
-      next.shortlist_options = pickTopOptions(next.candidate_options, 3);
-      if (next.shortlist_options.length >= 2) {
-        next.stage = 'shortlist';
-        next.cycle_count_in_stage = 0;
-        next.last_transition_reason = 'clustered ideas into shortlist';
-        return next;
-      }
-      reason.push('not enough strong options for shortlist');
-    }
-  } else if (next.stage === 'shortlist') {
-    if (next.shortlist_options.length < 2) {
-      next.shortlist_options = pickTopOptions(next.candidate_options, 3);
-    }
-    if (next.shortlist_options.length >= 2 && next.cycle_count_in_stage >= 1) {
-      next.stage = 'decide';
-      next.cycle_count_in_stage = 0;
-      next.decide_window_failures = 0;
-      next.last_transition_reason = 'ready for decision vote';
-      return next;
-    }
-  } else if (next.stage === 'decide') {
-    if (next.shortlist_options.length < 2) {
-      next.shortlist_options = pickTopOptions(next.candidate_options, 3);
-    }
-    const winner = detectAgreementDecision(turns, personaSpeakers, next.shortlist_options);
-    if (winner) {
-      next.locked_decision = winner;
-      next.stage = 'next_action';
-      next.cycle_count_in_stage = 0;
-      next.last_transition_reason = 'two explicit agreements reached';
-      return next;
-    }
-    if (next.cycle_count_in_stage >= 1) {
-      next.decide_window_failures += 1;
-      const forced = pickTopOptions(next.shortlist_options.length > 0 ? next.shortlist_options : next.candidate_options, 2);
-      if (forced.length >= 2) {
-        next.shortlist_options = forced;
-      }
-      next.cycle_count_in_stage = 0;
-      next.last_transition_reason = 'forced binary choice after stalled decision window';
-      return next;
-    }
-  }
-
-  if (reason.length > 0) next.last_transition_reason = reason.join('; ');
-  return next;
-};
-
-const buildWorkflowDirective = (state, speaker) => {
+const buildWorkflowDirective = (state, speaker, steps) => {
   if (!WORKFLOW_ENABLED) return '';
+  const step = getActiveWorkflowStep(state, steps);
+  const safeSteps = Array.isArray(steps) && steps.length > 0 ? steps : DEFAULT_WORKFLOW_STEPS;
   const lines = ['[workflow]'];
-  lines.push(`Current stage: ${state.stage}`);
-  lines.push(`Cycles in stage: ${state.cycle_count_in_stage}`);
-  if (state.shortlist_options.length > 0) {
-    lines.push(`Shortlist options: ${state.shortlist_options.map((o, i) => `${i + 1}. ${o}`).join(' | ')}`);
-  }
-  if (state.locked_decision) {
-    lines.push(`Locked decision: ${state.locked_decision}`);
-  }
+  lines.push(`Step ${state.step_index + 1} of ${safeSteps.length}: ${step.name}`);
+  lines.push(`Cycles in this step: ${state.cycles_in_step}/${WORKFLOW_CYCLE_WINDOW}`);
+  lines.push(`Total turns: ${state.total_turns}`);
+  lines.push(`Total cycles: ${state.total_cycles}`);
+  lines.push(`Instruction: ${step.instruction}`);
 
   if (speaker === 'Moderator') {
     lines.push('Role rule: You are a facilitator, not an idea generator.');
     lines.push('Do not pitch ideas or solutions. Only push process and decisions.');
     lines.push('If no intervention is needed right now, output exactly: NO_INTERVENTION');
   }
-
-  if (state.stage === 'brainstorm') {
-    lines.push('Objective: brainstorm now. Contribute 2 distinct ideas in this turn.');
-    lines.push("Use team language like 'let's' and build on what others just said.");
-    lines.push('Keep ideas concrete and different. Do not decide yet.');
-  } else if (state.stage === 'cluster') {
-    lines.push('Objective: group and merge overlapping ideas into clear themes.');
-  } else if (state.stage === 'shortlist') {
-    lines.push('Objective: narrow to at most three concrete options.');
-  } else if (state.stage === 'decide') {
-    lines.push('Objective: choose one option. State explicit agreement with one shortlist option.');
-  } else if (state.stage === 'next_action') {
-    lines.push('Objective: define the immediate next action for the locked decision.');
-  }
   lines.push("Speak as a teammate in a shared conversation. Prefer 'we' and 'let's' where natural.");
   lines.push('Output one concrete contribution now, not a statement about what you plan to do next.');
   lines.push('Never use any speaker labels or persona-name prefixes.');
-  if (state.stage !== 'brainstorm') {
-    lines.push('Avoid restarting broad brainstorming unless explicitly asked.');
-  }
   return lines.join('\n');
 };
 
-const getWorkflowObjectiveText = (stage) => {
-  if (stage === 'brainstorm') return 'Brainstorm now. Contribute 2 distinct ideas in this turn.';
-  if (stage === 'cluster') return 'Group and merge overlapping ideas into clear themes.';
-  if (stage === 'shortlist') return 'Narrow to at most three concrete options.';
-  if (stage === 'decide') return 'Choose one option and state explicit agreement.';
-  if (stage === 'next_action') return 'Define the immediate next action for the locked decision.';
-  return 'Contribute to the current stage objective.';
-};
-
-const formatWorkflowMessage = (state) => {
+const formatWorkflowMessage = (state, steps) => {
+  const step = getActiveWorkflowStep(state, steps);
+  const safeSteps = Array.isArray(steps) && steps.length > 0 ? steps : DEFAULT_WORKFLOW_STEPS;
   const lines = [];
-  lines.push(`Stage: ${state.stage}`);
-  lines.push(`Objective: ${getWorkflowObjectiveText(state.stage)}`);
-  if (state.shortlist_options.length > 0) {
-    lines.push(`Shortlist: ${state.shortlist_options.join(' | ')}`);
-  }
-  if (state.locked_decision) {
-    lines.push(`Locked decision: ${state.locked_decision}`);
-  }
+  lines.push(`Step ${state.step_index + 1} of ${safeSteps.length}: ${step.name}`);
+  lines.push(`Instruction: ${step.instruction}`);
+  lines.push(`Cycles in step: ${state.cycles_in_step}/${WORKFLOW_CYCLE_WINDOW}`);
+  lines.push(`Total turns: ${state.total_turns}`);
+  lines.push(`Total cycles: ${state.total_cycles}`);
   if (state.last_transition_reason) {
     lines.push(`Reason: ${state.last_transition_reason}`);
   }
   return lines.join('\n');
 };
 
-const appendVisibleWorkflowTurn = async (turns, state) => {
-  const content = formatWorkflowMessage(state);
+const appendVisibleWorkflowTurn = async (turns, state, steps) => {
+  const content = formatWorkflowMessage(state, steps);
   turns.push({ speaker: 'Workflow', content });
   await writeFile(FILE, JSON.stringify(turns, null, 2), 'utf8');
   const block = `**Workflow**:\n\n${content}${TURN_SEP}`;
   await writeFile(LOG_FILE, block, { flag: 'a', encoding: 'utf8' });
   process.stdout.write(block);
+};
+
+const advanceWorkflowAfterTurn = async (state, steps, turns, cycleCompletedThisTurn) => {
+  const safeSteps = Array.isArray(steps) && steps.length > 0 ? steps : DEFAULT_WORKFLOW_STEPS;
+  const next = sanitizeWorkflowState(state, safeSteps.length);
+  next.total_turns += 1;
+  if (cycleCompletedThisTurn) {
+    next.total_cycles += 1;
+    next.cycles_in_step += 1;
+    if (next.cycles_in_step >= WORKFLOW_CYCLE_WINDOW) {
+      next.step_index = (next.step_index + 1) % safeSteps.length;
+      next.cycles_in_step = 0;
+      next.last_transition_reason = `advanced after ${WORKFLOW_CYCLE_WINDOW} full cycles`;
+      await appendVisibleWorkflowTurn(turns, next, safeSteps);
+    }
+  }
+  await saveWorkflowState(next, safeSteps.length);
+  return next;
 };
 
 const hasTranscriptContamination = (text, knownSpeakerNames) => {
@@ -616,16 +502,6 @@ const normalizeModeratorOutput = (text) => {
   return 'NO_INTERVENTION';
 };
 
-const isStageAligned = (stage, text) => {
-  const t = (text || '').toLowerCase();
-  if (stage === 'brainstorm') return /\bidea|option|could|what if|let's try\b/.test(t);
-  if (stage === 'cluster') return /\btheme|group|combine|merge|overlap|cluster\b/.test(t);
-  if (stage === 'shortlist') return /\bshortlist|top|pick two|pick three|best options\b/.test(t);
-  if (stage === 'decide') return /\bchoose|pick|agree|vote|decision\b/.test(t);
-  if (stage === 'next_action') return /\bnext step|first step|today|this week|action\b/.test(t);
-  return true;
-};
-
 const personaFileToSpeaker = (fileName) => {
   const baseName = fileName.replace(/\.txt$/i, '');
   if (!baseName) return '';
@@ -648,8 +524,8 @@ const trimTurnsByPersonaWindow = (turns, maxPersonaTurns, personaSpeakers) => {
   return turns;
 };
 
-const generateAttempt = async (payload, knownSpeakerNames) => {
-  const indicator = startThinkingIndicator();
+const generateAttempt = async (payload, knownSpeakerNames, statusText = '') => {
+  const indicator = startThinkingIndicator(statusText);
   try {
     const res = await fetch(URL, {
       method: 'POST',
@@ -853,10 +729,14 @@ const maxPersonaTurns = KEEP_CYCLES * personaSpeakers.size;
 
 let personas = shufflePersonas(allPersonaFiles, availableSpecialPersonas);
 let personaIndex = 0;
-let workflowState = WORKFLOW_ENABLED ? await loadWorkflowState() : defaultWorkflowState();
-let pendingWorkflowCycles = 0;
+let workflowSteps = WORKFLOW_ENABLED ? await loadWorkflowSteps() : DEFAULT_WORKFLOW_STEPS;
+let workflowState = WORKFLOW_ENABLED ? await loadWorkflowState(workflowSteps.length) : defaultWorkflowState();
 
 while (true) {
+  if (WORKFLOW_ENABLED) {
+    workflowSteps = await loadWorkflowSteps();
+    workflowState = sanitizeWorkflowState(workflowState, workflowSteps.length);
+  }
   const system = await readFile(SYSTEM_FILE, 'utf8');
   let turns = [];
   let hasPersonaHistory = false;
@@ -874,8 +754,7 @@ while (true) {
     hasPersonaHistory = turns.some((turn) => personaSpeakers.has(turn.speaker));
     if (!hasPersonaHistory) {
       workflowState = defaultWorkflowState();
-      pendingWorkflowCycles = 0;
-      await saveWorkflowState(workflowState);
+      await saveWorkflowState(workflowState, workflowSteps.length);
     }
   }
 
@@ -896,7 +775,7 @@ while (true) {
     if (seededThisTurn || (!hasPersonaHistory && !hasWorkflowTurn)) {
       await writeFile(LOG_FILE, '\n', { flag: 'a', encoding: 'utf8' });
       process.stdout.write('\n');
-      await appendVisibleWorkflowTurn(turns, workflowState);
+      await appendVisibleWorkflowTurn(turns, workflowState, workflowSteps);
     }
   }
 
@@ -947,7 +826,7 @@ while (true) {
     }
   } catch {}
 
-  const workflowDirective = buildWorkflowDirective(workflowState, speaker);
+  const workflowDirective = buildWorkflowDirective(workflowState, speaker, workflowSteps);
   const systemPrompt = [persona.trim(), workflowDirective.trim(), system.trim(), ...contextBlocks]
     .filter((p) => p.length > 0)
     .join('\n\n');
@@ -980,7 +859,8 @@ while (true) {
 
   let accepted = null;
   for (let attempt = 1; attempt <= MAX_INVALID_TURN_RETRIES; attempt += 1) {
-    const result = await generateAttempt(payload, knownSpeakerNames);
+    const statusText = `(Turn ${workflowState.total_turns + 1}: Cycle ${workflowState.total_cycles + 1})`;
+    const result = await generateAttempt(payload, knownSpeakerNames, statusText);
     if (result.ok) {
       accepted = result;
       break;
@@ -988,26 +868,18 @@ while (true) {
 
     const audit = `[discarded invalid multi-speaker turn] speaker=${speaker} attempt=${attempt} reason=${result.reason}${TURN_SEP}`;
     await writeFile(LOG_FILE, audit, { flag: 'a', encoding: 'utf8' });
+    clearTerminalLine();
     process.stdout.write(audit);
   }
 
   if (!accepted) {
     const skip = `[skipped turn after invalid retries] speaker=${speaker} retries=${MAX_INVALID_TURN_RETRIES}\n\n`;
     await writeFile(LOG_FILE, skip, { flag: 'a', encoding: 'utf8' });
+    clearTerminalLine();
     process.stdout.write(skip);
 
-    if (WORKFLOW_ENABLED && cycleCompletedThisTurn) {
-      pendingWorkflowCycles += 1;
-      workflowState.cycle_count_in_stage += 1;
-      if (pendingWorkflowCycles >= WORKFLOW_CYCLE_WINDOW) {
-        const prevStage = workflowState.stage;
-        workflowState = evaluateWorkflowState(workflowState, turns, personaSpeakers);
-        pendingWorkflowCycles = 0;
-        await saveWorkflowState(workflowState);
-        if (workflowState.stage !== prevStage) {
-          await appendVisibleWorkflowTurn(turns, workflowState);
-        }
-      }
+    if (WORKFLOW_ENABLED) {
+      workflowState = await advanceWorkflowAfterTurn(workflowState, workflowSteps, turns, cycleCompletedThisTurn);
     }
 
     await sleep(SLEEP_MS);
@@ -1024,20 +896,11 @@ while (true) {
   if (isModeratorNoIntervention) {
     const note = `[moderator no intervention]${TURN_SEP}`;
     await writeFile(LOG_FILE, note, { flag: 'a', encoding: 'utf8' });
+    clearTerminalLine();
     process.stdout.write(note);
 
-    if (WORKFLOW_ENABLED && cycleCompletedThisTurn) {
-      pendingWorkflowCycles += 1;
-      workflowState.cycle_count_in_stage += 1;
-      if (pendingWorkflowCycles >= WORKFLOW_CYCLE_WINDOW) {
-        const prevStage = workflowState.stage;
-        workflowState = evaluateWorkflowState(workflowState, turns, personaSpeakers);
-        pendingWorkflowCycles = 0;
-        await saveWorkflowState(workflowState);
-        if (workflowState.stage !== prevStage) {
-          await appendVisibleWorkflowTurn(turns, workflowState);
-        }
-      }
+    if (WORKFLOW_ENABLED) {
+      workflowState = await advanceWorkflowAfterTurn(workflowState, workflowSteps, turns, cycleCompletedThisTurn);
     }
 
     await sleep(SLEEP_MS);
@@ -1047,6 +910,7 @@ while (true) {
   if (!fullResponse.trim()) {
     const blankNote = `[blank turn: no content generated]${TURN_SEP}`;
     await writeFile(LOG_FILE, blankNote, { flag: 'a', encoding: 'utf8' });
+    clearTerminalLine();
     process.stdout.write(blankNote);
     await sleep(SLEEP_MS);
     continue;
@@ -1056,14 +920,9 @@ while (true) {
   const prefix = `**${speaker}**:\n\n`;
   await writeFile(LOG_FILE, prefix, { flag: 'a', encoding: 'utf8' });
   await writeFile(LOG_FILE, fullResponse, { flag: 'a', encoding: 'utf8' });
+  clearTerminalLine();
   process.stdout.write(prefix);
   process.stdout.write(fullResponse);
-
-  if (WORKFLOW_ENABLED && speaker !== 'Moderator' && !isStageAligned(workflowState.stage, fullResponse)) {
-    const mismatch = `\n[workflow mismatch] stage=${workflowState.stage} speaker=${speaker}\n`;
-    await writeFile(LOG_FILE, mismatch, { flag: 'a', encoding: 'utf8' });
-    process.stdout.write(mismatch);
-  }
 
   if (toolCalls.length > 0) {
     const toolBlock = `\n[TOOL_CALLS]\n${
@@ -1099,18 +958,8 @@ while (true) {
     await writeFile(ADVISOR_LOG, logEntry, { flag: 'a' });
   }
 
-  if (WORKFLOW_ENABLED && cycleCompletedThisTurn) {
-    pendingWorkflowCycles += 1;
-    workflowState.cycle_count_in_stage += 1;
-    if (pendingWorkflowCycles >= WORKFLOW_CYCLE_WINDOW) {
-      const prevStage = workflowState.stage;
-      workflowState = evaluateWorkflowState(workflowState, turns, personaSpeakers);
-      pendingWorkflowCycles = 0;
-      await saveWorkflowState(workflowState);
-      if (workflowState.stage !== prevStage) {
-        await appendVisibleWorkflowTurn(turns, workflowState);
-      }
-    }
+  if (WORKFLOW_ENABLED) {
+    workflowState = await advanceWorkflowAfterTurn(workflowState, workflowSteps, turns, cycleCompletedThisTurn);
   }
 
   await sleep(SLEEP_MS);

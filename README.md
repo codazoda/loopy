@@ -43,6 +43,7 @@ All optional via environment variables:
 - `KEEP_CYCLES` (default `6`, keeps `KEEP_CYCLES x number_of_personas` persona turns)
 - `WORKFLOW_ENABLED` (default `true`)
 - `WORKFLOW_CYCLE_WINDOW` (default `3` full persona cycles)
+- `WORKFLOW_FILE` (default `workflow`, flat file of ordered workflow steps)
 - `MODERATOR_STRICT_MODE` (default `true`, moderator auto-falls back to `NO_INTERVENTION` when off-policy)
 - `DISCARD_MODE` (default `transcript_only`, rejects multi-speaker transcript formatting only)
 

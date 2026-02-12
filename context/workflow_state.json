@@ -1,9 +1,7 @@
 {
-  "stage": "brainstorm",
-  "cycle_count_in_stage": 0,
-  "candidate_options": [],
-  "shortlist_options": [],
-  "locked_decision": null,
-  "last_transition_reason": "initial",
-  "decide_window_failures": 0
+  "step_index": 0,
+  "cycles_in_step": 0,
+  "total_turns": 2,
+  "total_cycles": 0,
+  "last_transition_reason": "initial"
 }

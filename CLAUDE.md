@@ -41,6 +41,7 @@ All configuration is via environment variables. You can either:
 - `KEEP_CYCLES` - Persona cycles kept in `conversation.json` (default: `6`; total persona turns kept = `KEEP_CYCLES x persona_count`)
 - `WORKFLOW_ENABLED` - Enable staged workflow directives and state transitions (default: `true`)
 - `WORKFLOW_CYCLE_WINDOW` - Number of full persona cycles between workflow evaluations (default: `3`)
+- `WORKFLOW_FILE` - Flat workflow steps file path (default: `workflow`)
 - `WORKFLOW_STATE_FILE` - Workflow state JSON path (default: `context/workflow_state.json`)
 - `MODERATOR_STRICT_MODE` - Enforce moderator as process-only; invalid moderator outputs become `NO_INTERVENTION` (default: `true`)
 - `DISCARD_MODE` - Response validation policy (default: `transcript_only`, rejects transcript-style multi-speaker output)
